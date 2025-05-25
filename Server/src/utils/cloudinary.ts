@@ -14,7 +14,7 @@ export const uploadImage = async (file: File) => {
       folder: 'Sac Birthday Pictures',
       resource_type: 'image',
     });
-    return uploadResponse.secure_url;
+    return {profileUrl: uploadResponse.secure_url, profileId: uploadResponse.public_id};
   } catch (error) {
     console.error('Error uploading image to Cloudinary:', error);
     throw new Error('Image upload failed');

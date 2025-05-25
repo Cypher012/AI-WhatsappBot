@@ -7,6 +7,8 @@ import { Search, Edit, Trash2, Plus, Upload, X } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import {useRouter} from 'next/navigation';
 import {
   Table,
   TableBody,
@@ -55,125 +57,57 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { ClassMateProps } from '@/app/admin/page';
+ 
 
-// Array of months for the dropdown
-const months = [
-  { value: '1', label: 'January' },
-  { value: '2', label: 'February' },
-  { value: '3', label: 'March' },
-  { value: '4', label: 'April' },
-  { value: '5', label: 'May' },
-  { value: '6', label: 'June' },
-  { value: '7', label: 'July' },
-  { value: '8', label: 'August' },
-  { value: '9', label: 'September' },
-  { value: '10', label: 'October' },
-  { value: '11', label: 'November' },
-  { value: '12', label: 'December' },
-];
-
-// Function to get days in a month
-const getDaysInMonth = (month: string) => {
-  const daysInMonth = new Date(2024, Number.parseInt(month), 0).getDate();
-  return Array.from({ length: daysInMonth }, (_, i) => ({
-    value: (i + 1).toString(),
-    label: (i + 1).toString(),
-  }));
-};
-
-// Function to format month and day to display
-const formatBirthday = (month: string, day: string) => {
-  const monthName = months.find((m) => m.value === month)?.label;
-  return `${monthName} ${day}`;
-};
-
-// Mock data - in a real app, this would come from your API
-const mockBirthdayData = [
-  {
-    id: 1,
-    name: 'John Doe',
-    phone_number: '(555) 123-4567',
-    birth_month: '7',
-    birth_day: '15',
-    photo: '/placeholder.svg?height=40&width=40',
-    created_at: new Date('2024-01-15'),
-    updated_at: new Date('2024-01-15'),
-  },
-  {
-    id: 2,
-    name: 'Jane Smith',
-    phone_number: '(555) 987-6543',
-    birth_month: '3',
-    birth_day: '22',
-    photo: '/placeholder.svg?height=40&width=40',
-    created_at: new Date('2024-01-16'),
-    updated_at: new Date('2024-01-16'),
-  },
-  {
-    id: 3,
-    name: 'Mike Johnson',
-    phone_number: '(555) 456-7890',
-    birth_month: '11',
-    birth_day: '8',
-    photo: null,
-    created_at: new Date('2024-01-17'),
-    updated_at: new Date('2024-01-17'),
-  },
-];
-
-type BirthdayRecord = (typeof mockBirthdayData)[0];
-
-// Edit form schema
 const editFormSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters.'),
-  phone_number: z.string().min(1, 'Phone number is required.'),
-  birth_month: z.string().min(1, 'Birth month is required.'),
-  birth_day: z.string().min(1, 'Birth day is required.'),
-  photo: z.instanceof(File).optional(),
+  name: z.string().min(2, {
+    message: 'Name must be at least 2 characters.',
+  }),
+  phoneNumber: z.string().min(1, {
+    message: 'Phone number is required.',
+  }),
+  birth_month: z.string().min(1, {
+    message: 'Birth month is required.',
+  }),
+  birth_day: z.string().min(1, {
+    message: 'Birth day is required.',
+  }),
+  gender: z.enum(["male", "female"], {
+    required_error: "Please select a gender option.",
+  }),
+  photo: z.instanceof(File, {message: "File required"}),
 });
+
+const genderOptions = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+]
 
 type EditFormValues = z.infer<typeof editFormSchema>;
 
-export default function BirthdayAdmin(data: ClassMateProps) {
+export default function BirthdayAdmin({ records }: { records: ClassMateProps[] }) {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-  const [birthdayData, setBirthdayData] = useState(mockBirthdayData);
-  const [editingRecord, setEditingRecord] = useState<BirthdayRecord | null>(
-    null
-  );
+  const [birthdayData, setBirthdayData] = useState(records);
+  const [editingRecord, setEditingRecord] = useState<ClassMateProps | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [removeCurrentImage, setRemoveCurrentImage] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const router = useRouter()
 
   // Edit form
   const editForm = useForm<EditFormValues>({
     resolver: zodResolver(editFormSchema),
     defaultValues: {
       name: '',
-      phone_number: '',
+      phoneNumber: '',
       birth_month: '',
       birth_day: '',
+      gender: 'male',
+      photo: new File([], ''),
     },
   });
-
-  // Get days based on selected month
-  const days = selectedMonth ? getDaysInMonth(selectedMonth) : [];
-
-  // Handle month change to reset day if it's invalid for the new month
-  const handleMonthChange = (month: string) => {
-    setSelectedMonth(month);
-    editForm.setValue('birth_month', month);
-
-    // Reset day if it's invalid for the new month
-    const currentDay = editForm.getValues('birth_day');
-    const daysInNewMonth = getDaysInMonth(month).length;
-
-    if (currentDay && Number.parseInt(currentDay) > daysInNewMonth) {
-      editForm.setValue('birth_day', '');
-    }
-  };
 
   // Filter data based on search term
   const filteredData = useMemo(() => {
@@ -182,7 +116,7 @@ export default function BirthdayAdmin(data: ClassMateProps) {
     return birthdayData.filter(
       (record) =>
         record.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.phone_number.toLowerCase().includes(searchTerm.toLowerCase())
+        record.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [birthdayData, searchTerm]);
 
@@ -211,9 +145,6 @@ export default function BirthdayAdmin(data: ClassMateProps) {
         return;
       }
 
-      editForm.setValue('photo', file);
-      setRemoveCurrentImage(true);
-
       // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -225,7 +156,6 @@ export default function BirthdayAdmin(data: ClassMateProps) {
 
   // Remove selected image
   const removeImage = () => {
-    editForm.setValue('photo', undefined);
     setImagePreview(null);
     setRemoveCurrentImage(true);
     // Reset file input
@@ -236,16 +166,17 @@ export default function BirthdayAdmin(data: ClassMateProps) {
   };
 
   // Handle edit
-  const handleEdit = (record: BirthdayRecord) => {
+  const handleEdit = (record: ClassMateProps) => {
     setEditingRecord(record);
     editForm.reset({
       name: record.name,
-      phone_number: record.phone_number,
-      birth_month: record.birth_month,
-      birth_day: record.birth_day,
+      phoneNumber: record.phoneNumber,
+      birth_month: new Date(record.birthdayDate).getMonth() + 1 + '',
+      birth_day: new Date(record.birthdayDate).getDate() + '',
+      gender: record.gender,
+      photo: new File([], ''),
     });
-    setSelectedMonth(record.birth_month);
-    setImagePreview(record.photo);
+    setImagePreview(record.profileUrl);
     setRemoveCurrentImage(false);
     setIsEditDialogOpen(true);
   };
@@ -256,7 +187,6 @@ export default function BirthdayAdmin(data: ClassMateProps) {
     setEditingRecord(null);
     setImagePreview(null);
     setRemoveCurrentImage(false);
-    setSelectedMonth('');
     const fileInput = document.getElementById(
       'edit-photo-upload'
     ) as HTMLInputElement;
@@ -269,23 +199,6 @@ export default function BirthdayAdmin(data: ClassMateProps) {
 
     setIsSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // In a real app, you would upload the image and get a URL back
-      let photoUrl = editingRecord.photo;
-
-      // If user uploaded a new image
-      if (values.photo) {
-        // Simulate image upload and getting a URL back
-        photoUrl = URL.createObjectURL(values.photo);
-      }
-
-      // If user removed the current image
-      if (removeCurrentImage && !values.photo) {
-        photoUrl = null;
-      }
-
       // Update local state
       setBirthdayData((prev) =>
         prev.map((record) =>
@@ -293,11 +206,11 @@ export default function BirthdayAdmin(data: ClassMateProps) {
             ? {
                 ...record,
                 name: values.name,
-                phone_number: values.phone_number,
-                birth_month: values.birth_month,
-                birth_day: values.birth_day,
-                photo: photoUrl,
-                updated_at: new Date(),
+                phoneNumber: values.phoneNumber,
+                birthdayDate: new Date(2000, parseInt(values.birth_month) - 1, parseInt(values.birth_day)),
+                profileUrl: imagePreview || record.profileUrl,
+                gender: values.gender,
+                updatedAt: new Date(),
               }
             : record
         )
@@ -321,11 +234,8 @@ export default function BirthdayAdmin(data: ClassMateProps) {
   };
 
   // Handle delete
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
       setBirthdayData((prev) => prev.filter((record) => record.id !== id));
 
       toast({
@@ -341,6 +251,14 @@ export default function BirthdayAdmin(data: ClassMateProps) {
     }
   };
 
+  // Format birthday date for display
+  const formatBirthdayDisplay = (date: Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Search and Actions */}
@@ -354,7 +272,7 @@ export default function BirthdayAdmin(data: ClassMateProps) {
             className="pl-10"
           />
         </div>
-        <Button>
+        <Button onClick={() => router.push("/")}>
           <Plus className="w-4 h-4 mr-2" />
           Add New Birthday
         </Button>
@@ -369,6 +287,7 @@ export default function BirthdayAdmin(data: ClassMateProps) {
               <TableHead>Name</TableHead>
               <TableHead>Phone Number</TableHead>
               <TableHead>Birthday</TableHead>
+              <TableHead>Gender</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -387,9 +306,9 @@ export default function BirthdayAdmin(data: ClassMateProps) {
                 <TableRow key={record.id}>
                   <TableCell>
                     <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100">
-                      {record.photo ? (
+                      {record.profileUrl ? (
                         <Image
-                          src={record.photo || '/placeholder.svg'}
+                          src={record.profileUrl}
                           alt={record.name}
                           width={40}
                           height={40}
@@ -403,10 +322,11 @@ export default function BirthdayAdmin(data: ClassMateProps) {
                     </div>
                   </TableCell>
                   <TableCell className="font-medium">{record.name}</TableCell>
-                  <TableCell>{record.phone_number}</TableCell>
+                  <TableCell>{record.phoneNumber}</TableCell>
                   <TableCell>
-                    {formatBirthday(record.birth_month, record.birth_day)}
+                    {formatBirthdayDisplay(record.birthdayDate)}
                   </TableCell>
+                  <TableCell className="capitalize">{record.gender}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button
@@ -486,7 +406,7 @@ export default function BirthdayAdmin(data: ClassMateProps) {
 
                 <FormField
                   control={editForm.control}
-                  name="phone_number"
+                  name="phoneNumber"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Phone Number</FormLabel>
@@ -505,24 +425,9 @@ export default function BirthdayAdmin(data: ClassMateProps) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Birth Month</FormLabel>
-                        <Select
-                          onValueChange={(value) => handleMonthChange(value)}
-                          defaultValue={field.value}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select month" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {months.map((month) => (
-                              <SelectItem key={month.value} value={month.value}>
-                                {month.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <Input type="number" min="1" max="12" placeholder="1-12" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -534,30 +439,43 @@ export default function BirthdayAdmin(data: ClassMateProps) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Birth Day</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          value={field.value}
-                          disabled={!selectedMonth}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select day" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {days.map((day) => (
-                              <SelectItem key={day.value} value={day.value}>
-                                {day.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <Input type="number" min="1" max="31" placeholder="1-31" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={editForm.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>Gender</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex flex-col space-y-1"
+                        >
+                          {genderOptions.map((option) => (
+                            <FormItem key={option.value} className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value={option.value} />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                {option.label}
+                              </FormLabel>
+                            </FormItem>
+                          ))}
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={editForm.control}
@@ -593,33 +511,11 @@ export default function BirthdayAdmin(data: ClassMateProps) {
                             </label>
                           </div>
 
-                          {imagePreview && !removeCurrentImage && (
+                          {imagePreview && (
                             <div className="relative">
                               <div className="relative w-full h-56 rounded-lg overflow-hidden border">
                                 <Image
-                                  src={imagePreview || '/placeholder.svg'}
-                                  alt="Preview"
-                                  fill
-                                  className="object-cover"
-                                />
-                              </div>
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                className="absolute top-2 right-2"
-                                onClick={removeImage}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          )}
-
-                          {imagePreview && removeCurrentImage && (
-                            <div className="relative">
-                              <div className="relative w-full h-56 rounded-lg overflow-hidden border">
-                                <Image
-                                  src={imagePreview || '/placeholder.svg'}
+                                  src={imagePreview}
                                   alt="Preview"
                                   fill
                                   className="object-cover"

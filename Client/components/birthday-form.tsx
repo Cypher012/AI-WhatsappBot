@@ -9,6 +9,7 @@ import { Upload, X } from 'lucide-react';
 import * as z from 'zod';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import {
   Form,
   FormControl,
@@ -42,7 +43,10 @@ const formSchema = z.object({
   birth_day: z.string().min(1, {
     message: 'Birth day is required.',
   }),
-  photo: z.instanceof(File).optional(),
+  gender: z.enum(["male", "female"], {
+    required_error: "Please select a gender option.",
+  }),
+  photo: z.instanceof(File, {message: "Photo is Required"}).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -62,6 +66,12 @@ const months = [
   { value: '11', label: 'November' },
   { value: '12', label: 'December' },
 ];
+
+const genderOptions = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+]
+
 
 // Function to get days in a month
 const getDaysInMonth = (month: string) => {
@@ -144,7 +154,7 @@ export default function BirthdayForm() {
 
   // Remove selected image
   const removeImage = () => {
-    form.setValue('photo', undefined);
+    form.setValue('photo', null as unknown as File);
     setImagePreview(null);
     // Reset file input
     const fileInput = document.getElementById(
@@ -169,12 +179,11 @@ export default function BirthdayForm() {
         : '234' + phone_number;
 
       const { birth_month, birth_day } = values;
+      const month = parseInt(birth_month) - 1
+      const day = parseInt(birth_day)
 
-      const birth_date = new Date(
-        2000,
-        parseInt(birth_month),
-        parseInt(birth_day)
-      );
+
+      const birth_date = new Date(2000, month, day, 12, 0, 0);
 
       const formData = new FormData();
 
@@ -182,6 +191,7 @@ export default function BirthdayForm() {
       formData.append('birthday_date', birth_date.toISOString());
       formData.append('profile_picture', values.photo as File);
       formData.append('phoneNumber', phone_number);
+      formData.append('gender', values.gender)
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/birthday`, {
         method: 'POST',
@@ -330,6 +340,34 @@ export default function BirthdayForm() {
               )}
             />
           </div>
+
+
+          <FormField
+            control={form.control}
+            name="gender"
+            render={({ field }) => (
+              <FormItem className="space-y-3">
+                <FormLabel>Gender</FormLabel>
+                <FormControl>
+                  <RadioGroup
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    className="flex flex-row space-x-6" // GENDER FEATURE: Flex row layout for horizontal arrangement
+                  >
+                    {genderOptions.map((option) => (
+                      <FormItem key={option.value} className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value={option.value} />
+                        </FormControl>
+                        <FormLabel className="font-normal cursor-pointer">{option.label}</FormLabel>
+                      </FormItem>
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <FormField
             control={form.control}

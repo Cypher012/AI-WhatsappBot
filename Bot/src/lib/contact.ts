@@ -7,7 +7,7 @@ const family_elder_contact: Record<string, string> = {
 const male_friends: Record<string, string> = {
   Ayowole: '2348079682873@c.us',
   Tolugold: '2347059139192@c.us',
-  Duke: '2347018418644@c.us',
+  // Duke: '2347018418644@c.us',
   Enagmatic: '2348054381717@c.us',
   Oluwapelumi: '2348163113001@c.us',
   Cyrus: '2349067391039@c.us',

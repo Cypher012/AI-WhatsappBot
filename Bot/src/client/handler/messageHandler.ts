@@ -1,6 +1,6 @@
 import { Client, LocalAuth } from 'whatsapp-web.js';
 import { type Content } from '@google/genai';
-import { GenerateMessage } from '@/client/model';
+import { GenerateMessage } from '@/client/models/messageReply';
 import { findContactGroup } from '@/lib/contact';
 
 export const setupMessageHandler = (client: Client) => {

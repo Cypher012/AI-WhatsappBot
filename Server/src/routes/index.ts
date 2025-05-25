@@ -1,60 +1,40 @@
 import { Elysia, t } from 'elysia';
-import { eq } from 'drizzle-orm';
-import { usersTable } from '@/db/schema';
-import { db } from '@/db';
-import { uploadImage } from '@/utils/cloudinary';
+import birthdayService from './handler';
 
-const birthdayRouter = new Elysia({ prefix: '/birthday' });
 
-const birthdayPostSchema = t.Object({
+export const birthdayPostSchema = t.Object({
   name: t.String(),
-  birthday_date: t.String(), // ISO 8601 string (e.g. "2000-05-22T00:00:00Z")
+  birthday_date: t.String(),
   profile_picture: t.File({ format: 'image/*', required: true }),
+  profilePublicId: t.String(),
   phoneNumber: t.String({
     pattern: '^234[0-9]{10}$',
     error:
       'Phone number must start with 234 and be followed by exactly 10 digits',
   }),
+  gender: t.Union([t.Literal('male'), t.Literal('female')])
 });
 
-birthdayRouter.get('', async () => {
-  const users = await db.select().from(usersTable);
-  return users;
+export const birthdayUpdateSchema = t.Object({
+  name: t.Optional(t.String()),
+  birthday_date: t.Optional(t.String()),
+  profile_picture: t.Optional(t.File({ format: 'image/*', required: true })),
+  profilePublicId: t.Optional(t.String()),
+  phoneNumber: t.Optional(t.String({
+    pattern: '^234[0-9]{10}$',
+    error:
+      'Phone number must start with 234 and be followed by exactly 10 digits',
+  })),
+  gender: t.Optional(t.Union([t.Literal('male'), t.Literal('female')]))
 });
 
-birthdayRouter.get('/:id', async (req) => {
-  const user = await db
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.id, req.params.id));
-  return user;
-});
 
-birthdayRouter.post(
-  '',
-  async ({ body }) => {
-    console.log(body);
-    const { profile_picture } = body;
+const birthdayRouter = new Elysia({ prefix: '/birthday' })
+birthdayRouter.get("/", () => birthdayService.getUsers())
+birthdayRouter.get('/:id', (context) => birthdayService.getUser(context))
+birthdayRouter.post("/", (context) => birthdayService.createUser(context), {body: birthdayPostSchema})
+birthdayRouter.put("/:id", (context) => birthdayService.updateUser(context), {body: birthdayUpdateSchema})
+birthdayRouter.delete("/:id", (context) => birthdayService.deleteUser(context))
 
-    // Upload the image to Cloudinary
-    const profile_url = await uploadImage(profile_picture);
-
-    const upload = await db
-      .insert(usersTable)
-      .values({
-        name: body.name,
-        phoneNumber: body.phoneNumber,
-        birthdayDate: new Date(body.birthday_date), // convert to Date
-        profileUrl: profile_url,
-      })
-      .returning();
-
-    console.log(upload);
-    return upload;
-  },
-  {
-    body: birthdayPostSchema,
-  }
-);
 
 export default birthdayRouter;

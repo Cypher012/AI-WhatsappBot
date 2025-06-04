@@ -1,28 +1,33 @@
-import {ErrorContext} from "@better-fetch/fetch";
+import { ErrorContext } from '@better-fetch/fetch';
 
-const ApiErrorFunc = (error: ErrorContext) => {
-    const { status, statusText, message } = error.error || {};
+const ApiErrorFunc = (
+  error: ErrorContext
+): { statusText: string; message: string } => {
+  const {
+    status,
+    statusText = '',
+    message = 'An unexpected error occurred',
+  } = error.error || {};
 
-    switch (status) {
-        case 429:
-            console.error("Rate limit exceeded. Please try again later.");
-            break;
-        case 401:
-            console.error("Invalid credentials");
-            break;
-        case 403:
-            console.error("Access denied");
-            break;
-        case 404:
-            console.error("User not found");
-            break;
-        default:
-            if (statusText === "BAD_REQUEST") {
-                console.error(message);
-            } else {
-                console.error("An unexpected error occurred");
-            }
-    }
+  switch (status) {
+    case 429:
+      return {
+        statusText,
+        message: 'Rate limit exceeded. Please try again later.',
+      };
+    case 401:
+      return { statusText, message: 'Invalid credentials' };
+    case 403:
+      return { statusText, message: 'Access denied' };
+    case 404:
+      return { statusText, message: 'User not found' };
+    default:
+      if (statusText === 'BAD_REQUEST') {
+        return { statusText, message };
+      } else {
+        return { statusText, message: 'An unexpected error occurred' };
+      }
+  }
 };
 
 export default ApiErrorFunc;

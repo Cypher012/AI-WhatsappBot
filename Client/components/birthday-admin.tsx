@@ -1,6 +1,6 @@
 'use client';
 
-import type React from 'react';
+import React, {useEffect} from 'react';
 
 import { useState, useMemo } from 'react';
 import { Search, Edit, Trash2, Plus, Upload, X } from 'lucide-react';
@@ -8,7 +8,6 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import {useRouter} from 'next/navigation';
 import {
   Table,
   TableBody,
@@ -45,37 +44,32 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from "sonner"
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import type { ClassMateProps } from '@/app/admin/page';
- 
+import Link from "next/link";
+import {authClient} from "@/lib/auth";
+import {useRouter} from "next/navigation"
 
 const editFormSchema = z.object({
   name: z.string().min(2, {
     message: 'Name must be at least 2 characters.',
-  }),
+  }).optional(),
   phoneNumber: z.string().min(1, {
     message: 'Phone number is required.',
-  }),
+  }).optional(),
   birth_month: z.string().min(1, {
     message: 'Birth month is required.',
-  }),
+  }).optional(),
   birth_day: z.string().min(1, {
     message: 'Birth day is required.',
-  }),
+  }).optional(),
   gender: z.enum(["male", "female"], {
     required_error: "Please select a gender option.",
-  }),
-  photo: z.instanceof(File, {message: "File required"}),
+  }).optional(),
+  photo: z.instanceof(File, {message: "File required"}).optional(),
 });
 
 const genderOptions = [
@@ -86,7 +80,6 @@ const genderOptions = [
 type EditFormValues = z.infer<typeof editFormSchema>;
 
 export default function BirthdayAdmin({ records }: { records: ClassMateProps[] }) {
-  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [birthdayData, setBirthdayData] = useState(records);
   const [editingRecord, setEditingRecord] = useState<ClassMateProps | null>(null);
@@ -94,8 +87,7 @@ export default function BirthdayAdmin({ records }: { records: ClassMateProps[] }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [removeCurrentImage, setRemoveCurrentImage] = useState(false);
-  const router = useRouter()
-
+  const router = useRouter();
   // Edit form
   const editForm = useForm<EditFormValues>({
     resolver: zodResolver(editFormSchema),
@@ -108,6 +100,10 @@ export default function BirthdayAdmin({ records }: { records: ClassMateProps[] }
       photo: new File([], ''),
     },
   });
+
+  useEffect(() => {
+    setBirthdayData(records);
+  }, [records]);
 
   // Filter data based on search term
   const filteredData = useMemo(() => {
@@ -127,24 +123,23 @@ export default function BirthdayAdmin({ records }: { records: ClassMateProps[] }
       // Validate file type
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
       if (!allowedTypes.includes(file.type)) {
-        toast({
-          title: 'Invalid file type',
+        toast('Invalid file type',{
           description: 'Please select a .jpg, .jpeg, or .png file.',
-          variant: 'destructive',
+          closeButton: true,
         });
         return;
       }
 
       // Validate file size (optional - 5MB limit)
       if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: 'File too large',
+        toast('File too large',{
           description: 'Please select an image smaller than 5MB.',
-          variant: 'destructive',
+          closeButton: true,
         });
         return;
       }
-
+      
+      editForm.setValue('photo', file);
       // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -165,21 +160,7 @@ export default function BirthdayAdmin({ records }: { records: ClassMateProps[] }
     if (fileInput) fileInput.value = '';
   };
 
-  // Handle edit
-  const handleEdit = (record: ClassMateProps) => {
-    setEditingRecord(record);
-    editForm.reset({
-      name: record.name,
-      phoneNumber: record.phoneNumber,
-      birth_month: new Date(record.birthdayDate).getMonth() + 1 + '',
-      birth_day: new Date(record.birthdayDate).getDate() + '',
-      gender: record.gender,
-      photo: new File([], ''),
-    });
-    setImagePreview(record.profileUrl);
-    setRemoveCurrentImage(false);
-    setIsEditDialogOpen(true);
-  };
+
 
   // Handle edit dialog close
   const handleEditDialogClose = () => {
@@ -193,64 +174,148 @@ export default function BirthdayAdmin({ records }: { records: ClassMateProps[] }
     if (fileInput) fileInput.value = '';
   };
 
+    // Handle edit
+    const handleEdit = (record: ClassMateProps) => {
+      setEditingRecord(record);
+      editForm.reset({
+        name: record.name,
+        phoneNumber: record.phoneNumber,
+        birth_month: new Date(record.birthdayDate).getMonth() + 1 + '',
+        birth_day: new Date(record.birthdayDate).getDate() + '',
+        gender: record.gender,
+        photo: new File([], ''),
+      });
+      setImagePreview(record.profileUrl);
+      setRemoveCurrentImage(false);
+      setIsEditDialogOpen(true);
+    };
+
   // Handle edit form submission
   const handleEditSubmit = async (values: EditFormValues) => {
     if (!editingRecord) return;
-
+  
+    const previousData = birthdayData;
     setIsSubmitting(true);
-    try {
-      // Update local state
-      setBirthdayData((prev) =>
-        prev.map((record) =>
-          record.id === editingRecord.id
-            ? {
-                ...record,
-                name: values.name,
-                phoneNumber: values.phoneNumber,
-                birthdayDate: new Date(2000, parseInt(values.birth_month) - 1, parseInt(values.birth_day)),
-                profileUrl: imagePreview || record.profileUrl,
-                gender: values.gender,
-                updatedAt: new Date(),
-              }
-            : record
-        )
-      );
+  
+    // Create form data only with changed fields
+    const formData = new FormData();
+    
+    // Only append fields that have changed
+    if (values.name && values.name !== editingRecord.name) {
+      formData.append("name", values.name);
+    }
+    
+    if (values.phoneNumber && values.phoneNumber !== editingRecord.phoneNumber) {
+      formData.append("phoneNumber", values.phoneNumber);
+    }
+    
+    if (values.birth_month && values.birth_day) {
+      const updatedBirthdayDate = new Date(2000, parseInt(values.birth_month) - 1, parseInt(values.birth_day), 12, 0 , 0);
+      const currentBirthday = new Date(editingRecord.birthdayDate);
+      if (updatedBirthdayDate.getMonth() !== currentBirthday.getMonth() || 
+          updatedBirthdayDate.getDate() !== currentBirthday.getDate()) {
+        formData.append("birthday_date", updatedBirthdayDate.toISOString());
+      }
+    }
+    
+    if (values.gender && values.gender !== editingRecord.gender) {
+      formData.append("gender", values.gender);
+    }
+    
+    if (values.photo && values.photo.size > 0) {
+      formData.append("profile_picture", values.photo as File);
+    }
 
-      toast({
-        title: 'Success!',
-        description: 'Birthday record has been updated.',
+
+    // Only proceed if there are changes
+    if (formData.entries().next().done) {
+      toast('No changes',{
+        description: 'No changes were made to the record.',
+        closeButton: true,
       });
-
       handleEditDialogClose();
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Optimistically update UI
+    setBirthdayData((prev) =>
+      prev.map((record) =>
+        record.id === editingRecord.id
+          ? {
+              ...record,
+              ...(values.name && { name: values.name }),
+              ...(values.phoneNumber && { phoneNumber: values.phoneNumber }),
+              ...(values.birth_month && values.birth_day && {
+                birthdayDate: new Date(2000, parseInt(values.birth_month) - 1, parseInt(values.birth_day), 12, 0 , 0)
+              }),
+              ...(values.gender && { gender: values.gender }),
+              ...(imagePreview && { profileUrl: imagePreview }),
+              updatedAt: new Date(),
+            }
+          : record
+      )
+    );
+
+    handleEditDialogClose();
+  
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/birthday/${editingRecord.id}`, {
+        method: "PUT",
+        body: formData,
+      });
+  
+      if (!res.ok) {
+        throw new Error("Update failed");
+      }
+  
+      toast('Success!',{
+        description: 'Birthday record has been updated.',
+        closeButton: true,
+      });
+  
     } catch (error) {
-      toast({
-        title: 'Error',
+      // Rollback
+      setBirthdayData(previousData);
+      toast('Error',{
         description: 'Failed to update birthday record. Please try again.',
-        variant: 'destructive',
+        closeButton: true,
       });
     } finally {
       setIsSubmitting(false);
     }
   };
+  
 
   // Handle delete
   const handleDelete = async (id: string) => {
+    // Optimistically update UI
+    const previousData = birthdayData;
+    setBirthdayData((prev) => prev.filter((record) => record.id !== id));
+  
     try {
-      setBirthdayData((prev) => prev.filter((record) => record.id !== id));
-
-      toast({
-        title: 'Success!',
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/birthday/${id}`, {
+        method: "DELETE"
+      });
+  
+      if (!res.ok) {
+        throw new Error("Delete request failed");
+      }
+  
+      toast('Success!',{
         description: 'Birthday record has been deleted.',
+        closeButton: true,
       });
     } catch (error) {
-      toast({
-        title: 'Error',
+      // Rollback if it fails
+      setBirthdayData(previousData);
+      toast("Error", {
         description: 'Failed to delete birthday record. Please try again.',
-        variant: 'destructive',
+        closeButton: true,
       });
     }
   };
-
+  
   // Format birthday date for display
   const formatBirthdayDisplay = (date: Date) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -258,6 +323,19 @@ export default function BirthdayAdmin({ records }: { records: ClassMateProps[] }
       day: 'numeric',
     });
   };
+
+  const signOut = async () => {
+    await authClient.signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          router.push("/login"); // redirect to login page
+        },
+        onError: (error) => {
+          console.log("error signing out", error);
+        }
+      },
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -272,10 +350,13 @@ export default function BirthdayAdmin({ records }: { records: ClassMateProps[] }
             className="pl-10"
           />
         </div>
-        <Button onClick={() => router.push("/")}>
+        <div className={"flex items-center gap-3"}>
+        <Link href={"/"} className={"flex space-x-2 py-2.5 px-4 bg-black text-white rounded-lg items-center"}>
           <Plus className="w-4 h-4 mr-2" />
           Add New Birthday
-        </Button>
+        </Link>
+        <Button onClick={signOut}>Log Out</Button>
+        </div>
       </div>
 
       {/* Table */}

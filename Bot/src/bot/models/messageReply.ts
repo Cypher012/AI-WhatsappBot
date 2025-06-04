@@ -1,5 +1,5 @@
 import { GoogleGenAI, type Content } from '@google/genai';
-import { contactPrompt } from '@/lib/prompt';
+import { contactPrompt } from '@/bot/lib/prompt';
 
 const ai = new GoogleGenAI({ apiKey: Bun.env.GEMINI_API_KEY });
 
@@ -7,7 +7,7 @@ const getPromptByGroup = (groupName: string): string => {
   switch (groupName) {
     case 'family_elder_contact':
       return contactPrompt.familyElderPrompt;
-    case 'guy_friends':
+    case 'male_friends':
       return contactPrompt.guyFriendsPrompt;
     case 'female_friends':
       return contactPrompt.girlFriendsPrompt;
@@ -25,15 +25,10 @@ const generationConfig = {
   frequencyPenalty: 0.4,
 };
 
-export async function GenerateMessage(
-  historyList: Content[],
-  contactGroup: string,
-  message: string
-) {
+export async function GenerateMessage(contactGroup: string, message: string) {
   try {
     const chat = ai.chats.create({
       model: 'gemini-2.0-flash',
-      history: historyList,
       config: {
         systemInstruction: getPromptByGroup(contactGroup),
         ...generationConfig,
@@ -41,7 +36,7 @@ export async function GenerateMessage(
     });
 
     const response = await chat.sendMessage({ message });
-    console.log('✅ Response from model:', response);
+    // console.log('✅ Response from model:', response);
     return response.text;
   } catch (error) {
     console.error('❌ Error generating message from Gemini:', error);

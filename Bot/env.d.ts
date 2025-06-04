@@ -1,8 +1,5 @@
 import z from 'zod';
-
-const envSchema = z.object({
-    BASE_URL = z.string().url()
-});
+import envSchema from '@/schema/env';
 
 type EnvSchema = z.infer<typeof envSchema>;
 

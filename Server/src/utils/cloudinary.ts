@@ -8,6 +8,7 @@ cloudinary.config({
 
 export const uploadImage = async (file: File) => {
   try {
+    console.log("uploading image....")
     const buffer = Buffer.from(await file.arrayBuffer());
     const dataUri = `data:${file.type};base64,${buffer.toString('base64')}`;
     const uploadResponse = await cloudinary.uploader.upload(dataUri, {

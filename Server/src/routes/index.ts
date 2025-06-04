@@ -6,7 +6,6 @@ export const birthdayPostSchema = t.Object({
   name: t.String(),
   birthday_date: t.String(),
   profile_picture: t.File({ format: 'image/*', required: true }),
-  profilePublicId: t.String(),
   phoneNumber: t.String({
     pattern: '^234[0-9]{10}$',
     error:
@@ -17,9 +16,8 @@ export const birthdayPostSchema = t.Object({
 
 export const birthdayUpdateSchema = t.Object({
   name: t.Optional(t.String()),
-  birthday_date: t.Optional(t.String()),
+  birthday_date: t.Optional(t.Date()),
   profile_picture: t.Optional(t.File({ format: 'image/*', required: true })),
-  profilePublicId: t.Optional(t.String()),
   phoneNumber: t.Optional(t.String({
     pattern: '^234[0-9]{10}$',
     error:

@@ -20,7 +20,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from "sonner"
 import {
   Select,
   SelectContent,
@@ -32,7 +32,7 @@ import {
 // Form schema with validation
 const formSchema = z.object({
   name: z.string().min(2, {
-    message: 'Name must be at least 2 characters.',
+    message: 'Name must be at least 5 characters.',
   }),
   phone_number: z.string().min(1, {
     message: 'Phone number is required.',
@@ -83,7 +83,6 @@ const getDaysInMonth = (month: string) => {
 };
 
 export default function BirthdayForm() {
-  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
@@ -123,20 +122,18 @@ export default function BirthdayForm() {
       // Validate file type
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
       if (!allowedTypes.includes(file.type)) {
-        toast({
-          title: 'Invalid file type',
+        toast('Invalid file type',{
           description: 'Please select a .jpg, .jpeg, or .png file.',
-          variant: 'destructive',
+          closeButton: true,
         });
         return;
       }
 
       // Validate file size (optional - 5MB limit)
       if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: 'File too large',
+        toast('File too large',{
           description: 'Please select an image smaller than 5MB.',
-          variant: 'destructive',
+          closeButton: true,
         });
         return;
       }
@@ -182,7 +179,6 @@ export default function BirthdayForm() {
       const month = parseInt(birth_month) - 1
       const day = parseInt(birth_day)
 
-
       const birth_date = new Date(2000, month, day, 12, 0, 0);
 
       const formData = new FormData();
@@ -204,10 +200,9 @@ export default function BirthdayForm() {
       // Handle successful submission
 
       // Show success toast
-      toast({
-        variant: 'success',
-        title: 'Success!',
-        description: 'Birthday entry has been added.',
+      toast('Success!', {
+        description: 'Birthday record has been created.',
+        closeButton: true,
       });
 
       // Reset form and preview
@@ -219,10 +214,9 @@ export default function BirthdayForm() {
       ) as HTMLInputElement;
       if (fileInput) fileInput.value = '';
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to add birthday entry. Please try again.',
-        variant: 'destructive',
+      toast('Error', {
+        description: 'Failed to update birthday record. Please try again.',
+        closeButton: true,
       });
     } finally {
       setIsSubmitting(false);
@@ -258,7 +252,7 @@ export default function BirthdayForm() {
               <FormItem>
                 <FormLabel>Full Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="John Doe" {...field} />
+                  <Input placeholder="Firstname Lastname" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -272,7 +266,7 @@ export default function BirthdayForm() {
               <FormItem>
                 <FormLabel>Phone Number</FormLabel>
                 <FormControl>
-                  <Input placeholder="(123) 456-7890" {...field} />
+                  <Input placeholder="2349085678909" {...field} />
                 </FormControl>
                 <FormDescription>
                   This must be unique and will be used for identification.

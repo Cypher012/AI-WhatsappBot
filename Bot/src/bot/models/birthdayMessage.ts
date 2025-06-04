@@ -1,9 +1,7 @@
-import { GoogleGenAI, type Content } from '@google/genai';
-import { contactPrompt } from '@/lib/prompt';
-import type { User } from '@/lib/fetchUser';
+import { GoogleGenAI } from '@google/genai';
+import type { User } from '@/bot/lib/fetchUser';
 
-const ai = new GoogleGenAI({ apiKey: Bun.env.GEMINI_API_KEY });
-
+const AI = new GoogleGenAI({ apiKey: Bun.env.GEMINI_API_KEY });
 
 export function generateBirthdayPrompt(user: User): string {
   return `
@@ -42,7 +40,7 @@ export async function GenerateBirthdayMessage(
   user: User,
 ) {
   try {
-    const chat = ai.chats.create({
+    const chat = AI.chats.create({
       model: 'gemini-2.0-flash',
       config: {
         systemInstruction,
@@ -58,3 +56,4 @@ export async function GenerateBirthdayMessage(
     return null; // allow fallback in caller
   }
 }
+

@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 // Define the gender enum
 export const genderEnum = pgEnum('gender', ['male', 'female']);
 
-export const usersTable = pgTable('birthday', {
+export const classmateTable = pgTable('birthday', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 256 }).notNull().unique(),
   phoneNumber: varchar('phone_number', { length: 256 }).notNull().unique(),
